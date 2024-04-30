@@ -10,6 +10,8 @@ import {
   CreateBasePathMappingCommand,
   CreateDomainNameCommand,
   CreateDomainNameCommandOutput,
+  UpdateDomainNameCommand,
+  UpdateDomainNameCommandOutput,
   DeleteBasePathMappingCommand,
   DeleteDomainNameCommand,
   GetBasePathMappingsCommand,
@@ -72,6 +74,44 @@ class APIGatewayV1Wrapper extends APIGatewayBase {
     try {
       const domainInfo: CreateDomainNameCommandOutput = await this.apiGateway.send(
         new CreateDomainNameCommand(params)
+      );
+      return new DomainInfo(domainInfo);
+    } catch (err) {
+      throw new Error(
+        `V1 - Failed to create custom domain '${domain.givenDomainName}':\n${err.message}`
+      );
+    }
+  }
+
+  public async updateCustomDomain (domain: DomainConfig): Promise<DomainInfo> {
+    const params: any = {
+      domainName: domain.givenDomainName,
+      endpointConfiguration: {
+        types: [domain.endpointType]
+      },
+      securityPolicy: domain.securityPolicy
+    };
+
+    const isEdgeType = domain.endpointType === Globals.endpointTypes.edge;
+    if (isEdgeType) {
+      params.certificateArn = domain.certificateArn;
+    } else {
+      params.regionalCertificateArn = domain.certificateArn;
+
+      if (domain.tlsTruststoreUri) {
+        params.mutualTlsAuthentication = {
+          truststoreUri: domain.tlsTruststoreUri
+        };
+
+        if (domain.tlsTruststoreVersion) {
+          params.mutualTlsAuthentication.truststoreVersion = domain.tlsTruststoreVersion;
+        }
+      }
+    }
+
+    try {
+      const domainInfo: UpdateDomainNameCommandOutput = await this.apiGateway.send(
+        new UpdateDomainNameCommand(params)
       );
       return new DomainInfo(domainInfo);
     } catch (err) {

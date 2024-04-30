@@ -259,7 +259,14 @@ class ServerlessCustomDomain {
         Logging.logInfo(`Custom domain '${domain.givenDomainName}' was created.
                  New domains may take up to 40 minutes to be initialized.`);
       } else {
-        Logging.logInfo(`Custom domain '${domain.givenDomainName}' already exists.`);
+        if (domain.tlsTruststoreUri) {
+          await this.s3Wrapper.assertTlsCertObjectExists(domain);
+        }
+        if (!domain.certificateArn) {
+          domain.certificateArn = await acm.getCertArn(domain);
+        }
+        domain.domainInfo = await apiGateway.updateCustomDomain(domain);
+        Logging.logInfo(`Custom domain '${domain.givenDomainName}' was updated.`);
       }
       await route53.changeResourceRecordSet(ChangeAction.UPSERT, domain);
     } catch (err) {

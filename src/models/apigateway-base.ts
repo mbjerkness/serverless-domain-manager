@@ -5,6 +5,8 @@ import DomainConfig = require("./domain-config");
 abstract class APIGatewayBase {
     abstract createCustomDomain(domain: DomainConfig): Promise<DomainInfo>;
 
+    abstract updateCustomDomain(domain: DomainConfig): Promise<DomainInfo>;
+
     abstract getCustomDomain(domain: DomainConfig, silent?: boolean): Promise<DomainInfo>;
 
     abstract deleteCustomDomain(domain: DomainConfig): Promise<void>;

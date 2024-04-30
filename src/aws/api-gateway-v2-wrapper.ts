@@ -12,6 +12,8 @@ import {
   CreateApiMappingCommand,
   CreateDomainNameCommand,
   CreateDomainNameCommandOutput,
+  UpdateDomainNameCommand,
+  UpdateDomainNameCommandOutput,
   DeleteApiMappingCommand,
   DeleteDomainNameCommand,
   GetApiMappingsCommand,
@@ -76,6 +78,43 @@ class APIGatewayV2Wrapper extends APIGatewayBase {
     } catch (err) {
       throw new Error(
         `V2 - Failed to create custom domain '${domain.givenDomainName}':\n${err.message}`
+      );
+    }
+  }
+
+  /**
+   * Updates Custom Domain Name
+   * @param domain: DomainConfig
+   */
+  public async updateCustomDomain (domain: DomainConfig): Promise<DomainInfo> {
+    const params: any = {
+      DomainName: domain.givenDomainName,
+      DomainNameConfigurations: [{
+        CertificateArn: domain.certificateArn,
+        EndpointType: domain.endpointType,
+        SecurityPolicy: domain.securityPolicy
+      }]
+    };
+
+    const isEdgeType = domain.endpointType === Globals.endpointTypes.edge;
+    if (!isEdgeType && domain.tlsTruststoreUri) {
+      params.MutualTlsAuthentication = {
+        TruststoreUri: domain.tlsTruststoreUri
+      };
+
+      if (domain.tlsTruststoreVersion) {
+        params.MutualTlsAuthentication.TruststoreVersion = domain.tlsTruststoreVersion;
+      }
+    }
+
+    try {
+      const domainInfo: UpdateDomainNameCommandOutput = await this.apiGateway.send(
+        new UpdateDomainNameCommand(params)
+      );
+      return new DomainInfo(domainInfo);
+    } catch (err) {
+      throw new Error(
+        `V2 - Failed to update custom domain '${domain.givenDomainName}':\n${err.message}`
       );
     }
   }

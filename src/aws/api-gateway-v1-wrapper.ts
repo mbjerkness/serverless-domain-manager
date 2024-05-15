@@ -89,33 +89,44 @@ class APIGatewayV1Wrapper extends APIGatewayBase {
     const params: any = {
       domainName: domain.givenDomainName,
       patchOperations: [
-        {
-          op: "replace",
-          path: "/certificateArn",
-          value: domain.certificateArn
-        },
-        {
-          op: "replace",
-          path: "/securityPolicy",
-          value: domain.securityPolicy
-        }
       ]
     };
 
+    
 
+    if (domain.certificateArn !== domain.domainInfo?.certificateArn) {
+      params.patchOperations.push({
+        op: "replace",
+        path: "/certificateArn",
+        value: domain.certificateArn
+      });
+    }
 
-    try {
-      Logging.logWarning(`params - '${JSON.stringify(params, null, 4)}'`);
-      const domainNameParams = new UpdateDomainNameCommand(params);
-      Logging.logWarning(`UpdateDomainNameCommand - '${JSON.stringify(domainNameParams, null, 4)}'`);
-      const domainInfo: UpdateDomainNameCommandOutput = await this.apiGateway.send(
-        domainNameParams
-      );
-      return new DomainInfo(domainInfo);
-    } catch (err) {
-      throw new Error(
-        `V1 - Failed to update custom domain '${domain.givenDomainName}':\n${err.message}`
-      );
+    if (domain.securityPolicy !== domain.domainInfo?.securityPolicy) {
+      params.patchOperations.push({
+        op: "replace",
+        path: "/securityPolicy",
+        value: domain.securityPolicy
+      });
+    }
+
+    if (params.patchOperations.length === 0) {
+      Logging.logInfo(`V1 - No changes detected for custom domain '${domain.givenDomainName}'`);
+      return domain.domainInfo;
+    } else {
+      try {
+        Logging.logWarning(`params - '${JSON.stringify(params, null, 4)}'`);
+        const domainNameParams = new UpdateDomainNameCommand(params);
+        Logging.logWarning(`UpdateDomainNameCommand - '${JSON.stringify(domainNameParams, null, 4)}'`);
+        const domainInfo: UpdateDomainNameCommandOutput = await this.apiGateway.send(
+          domainNameParams
+        );
+        return new DomainInfo(domainInfo);
+      } catch (err) {
+        throw new Error(
+          `V1 - Failed to update custom domain '${domain.givenDomainName}':\n${err.message}`
+        );
+      }
     }
   }
 

@@ -327,7 +327,7 @@ class ServerlessCustomDomain {
         }
         await route53.changeResourceRecordSet(ChangeAction.UPSERT, domain);
       } catch (err) {
-        throw new Error(`Unable to create domain '${domain.givenDomainName}':\n${err.message}`);
+        throw new Error(`Unable to update domain '${domain.givenDomainName}':\n${err.message}`);
       } finally {
         if (updateProgress) {
           updateProgress.remove();

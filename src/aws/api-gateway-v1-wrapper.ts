@@ -116,7 +116,7 @@ class APIGatewayV1Wrapper extends APIGatewayBase {
       return new DomainInfo(domainInfo);
     } catch (err) {
       throw new Error(
-        `V1 - Failed to create custom domain '${domain.givenDomainName}':\n${err.message}`
+        `V1 - Failed to update custom domain '${domain.givenDomainName}':\n${err.message}`
       );
     }
   }

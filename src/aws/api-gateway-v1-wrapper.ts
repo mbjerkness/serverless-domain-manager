@@ -111,7 +111,7 @@ class APIGatewayV1Wrapper extends APIGatewayBase {
 
     try {
       const domainNameParams = new UpdateDomainNameCommand(params);
-      Logging.logWarning(`params - '${domainNameParams}'`);
+      Logging.logWarning(`params - '${JSON.stringify(domainNameParams, null, 4)}'`);
       const domainInfo: UpdateDomainNameCommandOutput = await this.apiGateway.send(
         domainNameParams
       );

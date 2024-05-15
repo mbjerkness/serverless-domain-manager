@@ -5,7 +5,9 @@ class DomainInfo {
   public domainName: string;
   public hostedZoneId: string;
   public securityPolicy: string;
-
+  public certificateName: string;
+  public certificateArn: string;
+  
   /**
    * Sometimes, the getDomainName call doesn't return either a distributionHostedZoneId or a regionalHostedZoneId.
    * AFAICT, this only happens with edge-optimized endpoints.
@@ -31,6 +33,9 @@ class DomainInfo {
     this.securityPolicy = data.securityPolicy ||
       (data.DomainNameConfigurations && data.DomainNameConfigurations[0].SecurityPolicy) ||
       this.defaultSecurityPolicy;
+
+    this.certificateName = data.certificateName;
+    this.certificateArn = data.certificateArn;
   }
 }
 

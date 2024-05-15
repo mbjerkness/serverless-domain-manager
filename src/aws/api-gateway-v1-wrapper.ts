@@ -84,34 +84,30 @@ class APIGatewayV1Wrapper extends APIGatewayBase {
   }
 
   public async updateCustomDomain (domain: DomainConfig): Promise<DomainInfo> {
+    Logging.logWarning(`domainConfig - '${JSON.stringify(domain, null, 4)}'`);
+
     const params: any = {
       domainName: domain.givenDomainName,
-      endpointConfiguration: {
-        types: [domain.endpointType]
-      },
-      securityPolicy: domain.securityPolicy
+      patchOperations: [
+        {
+          op: "replace",
+          path: "/certificateArn",
+          value: domain.certificateArn
+        },
+        {
+          op: "replace",
+          path: "/securityPolicy",
+          value: domain.securityPolicy
+        }
+      ]
     };
 
-    const isEdgeType = domain.endpointType === Globals.endpointTypes.edge;
-    if (isEdgeType) {
-      params.certificateArn = domain.certificateArn;
-    } else {
-      params.regionalCertificateArn = domain.certificateArn;
 
-      if (domain.tlsTruststoreUri) {
-        params.mutualTlsAuthentication = {
-          truststoreUri: domain.tlsTruststoreUri
-        };
-
-        if (domain.tlsTruststoreVersion) {
-          params.mutualTlsAuthentication.truststoreVersion = domain.tlsTruststoreVersion;
-        }
-      }
-    }
 
     try {
+      Logging.logWarning(`params - '${JSON.stringify(params, null, 4)}'`);
       const domainNameParams = new UpdateDomainNameCommand(params);
-      Logging.logWarning(`params - '${JSON.stringify(domainNameParams, null, 4)}'`);
+      Logging.logWarning(`UpdateDomainNameCommand - '${JSON.stringify(domainNameParams, null, 4)}'`);
       const domainInfo: UpdateDomainNameCommandOutput = await this.apiGateway.send(
         domainNameParams
       );

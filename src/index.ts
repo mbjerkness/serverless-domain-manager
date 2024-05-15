@@ -43,7 +43,7 @@ class ServerlessCustomDomain {
       Globals.v3Utils = v3Utils;
     }
 
-    /* eslint camelcase: ["error", {allow: ["create_domain", "delete_domain"]}] */
+    /* eslint camelcase: ["error", {allow: ["create_domain", "update_domain", "delete_domain"]}] */
     this.commands = {
       create_domain: {
         lifecycleEvents: [
@@ -51,6 +51,13 @@ class ServerlessCustomDomain {
           "initialize"
         ],
         usage: "Creates a domain using the domain name defined in the serverless file"
+      },
+      update_domain: {
+        lifecycleEvents: [
+          "update",
+          "initialize"
+        ],
+        usage: "Updates a domain using the domain name defined in the serverless file"
       },
       delete_domain: {
         lifecycleEvents: [
@@ -66,6 +73,7 @@ class ServerlessCustomDomain {
       "before:deploy:deploy": this.hookWrapper.bind(this, this.createOrGetDomainForCfOutputs),
       "before:remove:remove": this.hookWrapper.bind(this, this.removeBasePathMappings),
       "create_domain:create": this.hookWrapper.bind(this, this.createDomains),
+      "update_domain:update": this.hookWrapper.bind(this, this.updateDomains),
       "delete_domain:delete": this.hookWrapper.bind(this, this.deleteDomains)
     };
   }
@@ -265,6 +273,7 @@ class ServerlessCustomDomain {
         if (!domain.certificateArn) {
           domain.certificateArn = await acm.getCertArn(domain);
         }
+        Logging.logInfo(`Trying to update custom domain '${domain.givenDomainName}'.`);
         domain.domainInfo = await apiGateway.updateCustomDomain(domain);
         Logging.logInfo(`Custom domain '${domain.givenDomainName}' was updated.`);
       }
@@ -277,6 +286,54 @@ class ServerlessCustomDomain {
       }
     }
   }
+
+  /**
+   * Lifecycle function to update a domain
+   * Wraps creating a domain and resource record set
+   */
+  public async updateDomains (): Promise<void> {
+    await Promise.all(this.domains.map(async (domain) => {
+      await this.updateDomain(domain);
+    }));
+  }
+
+  /**
+   * Lifecycle function to create a domain
+   * Wraps creating a domain and resource record set
+   */
+    public async updateDomain (domain: DomainConfig): Promise<void> {
+      const updateProgress = Globals.v3Utils && Globals.v3Utils.progress.get(`update-${domain.givenDomainName}`);
+      const route53Creds = domain.route53Profile ? await Globals.getProfileCreds(domain.route53Profile) : Globals.credentials;
+  
+      const apiGateway = this.getApiGateway(domain);
+      const route53 = new Route53Wrapper(route53Creds, domain.route53Region);
+      const acm = new ACMWrapper(Globals.credentials, domain.endpointType);
+  
+      domain.domainInfo = await apiGateway.getCustomDomain(domain);
+  
+      try {
+        if (!domain.domainInfo) {
+          throw new Error(`Unable to update domain '${domain.givenDomainName}':\nDomain does not exist.`);
+        } else {
+          if (domain.tlsTruststoreUri) {
+            await this.s3Wrapper.assertTlsCertObjectExists(domain);
+          }
+          if (!domain.certificateArn) {
+            domain.certificateArn = await acm.getCertArn(domain);
+          }
+          Logging.logInfo(`Trying to update custom domain '${domain.givenDomainName}'.`);
+          domain.domainInfo = await apiGateway.updateCustomDomain(domain);
+          Logging.logInfo(`Custom domain '${domain.givenDomainName}' was updated.`);
+        }
+        await route53.changeResourceRecordSet(ChangeAction.UPSERT, domain);
+      } catch (err) {
+        throw new Error(`Unable to create domain '${domain.givenDomainName}':\n${err.message}`);
+      } finally {
+        if (updateProgress) {
+          updateProgress.remove();
+        }
+      }
+    }
 
   /**
    * Lifecycle function to delete a domain
